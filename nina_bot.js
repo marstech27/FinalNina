@@ -527,62 +527,71 @@ async function startBot() {
       }
 
       // 9. Promotion/Service detection
-      const promotionPatterns = [
-        /paid.*services.*available/i,
-        /assignment.*quiz.*gdb.*solution/i,
-        /academic.*services/i,
-        /lms.*handling.*services/i,
-        /complete.*semester.*half.*semester/i,
-        /guaranteed.*results/i,
-        /contact.*us.*directly/i,
-        /vu.*lms.*handling.*expert/i,
-        /all.*subjects.*activities/i,
-        /reliable.*affordable.*result.*oriented/i,
-        /\+92\d{3}-?\d{7}/i,
-        /sir.*ali/i,
-        /packages.*available/i,
-        /monthly.*plans/i,
-        /easy.*installments/i,
-        /lecture.*watching.*very.*low.*cost/i,
-        /cs.*projects.*b\.ed.*psychology/i,
-        /management.*math.*projects/i,
-        /full.*semester.*half.*semester/i,
-        /cisco.*assignments/i,
-        /hard.*form.*books.*available/i,
-        /contact.*number.*help.*guidelines/i
-      ];
-      
-      const hasPromotion = promotionPatterns.some(pattern => pattern.test(text));
-      
-      // Check if it's a legitimate question vs promotion
-      const isQuestion = /\b(help|solution|needed|required|anyone|please)\b/i.test(text);
-      const hasContactInfo = /\+92\d{3}-?\d{7}|contact.*me|dm.*me/i.test(text);
-      const hasPricing = /(paid|price|cost|rs\.?\s*\d|charges)/i.test(text);
-      const hasMultipleServices = (text.match(/(assignment|quiz|gdb|project|lms)/gi) || []).length >= 3;
-      
-      const isDefinitePromotion = hasPromotion && (hasContactInfo || hasPricing || hasMultipleServices) && !isQuestion;
-      
-      if (!isAdmin && isDefinitePromotion && !isDev) {
-        if (!promotionCount.has(from)) promotionCount.set(from, {});
-        const pc = promotionCount.get(from);
-        pc[senderStr] ??= { count: 0, timeout: null };
-        pc[senderStr].count++;
-        clearTimeout(pc[senderStr].timeout);
-        pc[senderStr].timeout = setTimeout(() => (pc[senderStr].count = 0), 60000); // 1 minute timeout
+     if (!isAdmin && isDefinitePromotion && !isDev) {
+  if (!promotionCount.has(from)) promotionCount.set(from, {});
+  const pc = promotionCount.get(from);
 
-        await sock.sendMessage(from, {
-          text: `⚠️ 𝐏𝐫𝐨𝐦𝐨𝐭𝐢𝐨𝐧 𝐃𝐞𝐭𝐞𝐜𝐭𝐞𝐝 — @${senderStr.split("@")[0]}\n\nPromotional content is not allowed here.\nPlease take admin permission first.\n\n⚡ 𝐖𝐚𝐫𝐧𝐢𝐧𝐠 • ${pc[senderStr].count}/3${signature}`,
-          mentions: [senderStr],
-        });
-        
-        if (pc[senderStr].count >= 3) {
-          await sock.sendMessage(from, {
-            text: `🚫 @${senderStr.split("@")[0]} 𝐛𝐞 𝐰𝐚𝐫𝐧𝐞𝐝 𝐟𝐨𝐫 𝐫𝐞𝐩𝐞𝐚𝐭𝐞𝐝 𝐩𝐫𝐨𝐦𝐨𝐭𝐢𝐨𝐧!\n\n𝐀𝐝𝐦𝐢𝐧𝐬 𝐩𝐥𝐞𝐚𝐬𝐞 𝐭𝐚𝐤𝐞 𝐚𝐜𝐭𝐢𝐨𝐧${signature}`,
-            mentions: [senderStr],
-          });
-        }
-        return;
+  pc[senderStr] ??= { count: 0, timeout: null };
+  pc[senderStr].count++;
+
+  clearTimeout(pc[senderStr].timeout);
+
+  pc[senderStr].timeout = setTimeout(() => {
+    pc[senderStr].count = 0;
+  }, 60000); // 1 minute reset
+
+  // 🚫 DELETE PROMOTIONAL MESSAGE
+  if (botIsAdmin) {
+    try {
+      await sock.sendMessage(from, {
+        delete: msg.key
+      });
+    } catch (_) {}
+  }
+
+  // ⚠️ WARNING MESSAGE
+  await sock.sendMessage(from, {
+    text: `⚠️ 𝐏𝐫𝐨𝐦𝐨𝐭𝐢𝐨𝐧 𝐃𝐞𝐭𝐞𝐜𝐭𝐞𝐝 — @${senderStr.split("@")[0]}
+
+Promotional content is not allowed here.
+Please take admin permission first.
+
+⚡ 𝐖𝐚𝐫𝐧𝐢𝐧𝐠 • ${pc[senderStr].count}/3${signature}`,
+    mentions: [senderStr],
+  });
+
+  // 🚨 REMOVE AFTER 3 WARNINGS
+  if (pc[senderStr].count >= 3 && botIsAdmin) {
+    try {
+
+      if (!botRemovedUsers.has(from)) {
+        botRemovedUsers.set(from, new Set());
       }
+
+      botRemovedUsers.get(from).add(senderStr);
+
+      await sock.groupParticipantsUpdate(
+        from,
+        [senderStr],
+        "remove"
+      );
+
+      await sock.sendMessage(from, {
+        text: `🚨 *𝐔𝐬𝐞𝐫 𝐑𝐞𝐦𝐨𝐯𝐞𝐝*
+
+@${senderStr.split("@")[0]} removed after repeated promotions.
+
+𝐏𝐫𝐨𝐦𝐨𝐭𝐢𝐨𝐧𝐚𝐥 𝐜𝐨𝐧𝐭𝐞𝐧𝐭 𝐢𝐬 𝐧𝐨𝐭 𝐭𝐨𝐥𝐞𝐫𝐚𝐭𝐞𝐝${signature}`,
+        mentions: [senderStr],
+      });
+
+    } catch (err) {
+      console.log("Promotion remove error:", err);
+    }
+  }
+
+  return;
+}
 
       // 10. Anti-link / Anti-sticker enforcement
       const groupLinkRegex   = /https:\/\/chat\.whatsapp\.com\/\S+/i;
