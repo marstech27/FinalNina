@@ -1,0 +1,20 @@
+{
+  "name": "nina-bot",
+  "version": "1.0.0",
+  "description": "Nina WhatsApp Bot - VU NextGen Group",
+  "main": "nina_bot.js",
+  "type": "module",
+  "scripts": {
+    "start": "node nina_bot.js"
+  },
+  "dependencies": {
+    "@hapi/boom": "^10.0.1",
+    "@whiskeysockets/baileys": "^6.7.9",
+    "moment-timezone": "^0.5.47",
+    "pino": "^8.21.0",
+    "qrcode-terminal": "^0.12.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
