@@ -513,7 +513,7 @@ async function startBot() {
             botRemovedUsers.get(from).add(id);
             await sock.groupParticipantsUpdate(from, [id], "remove");
             await sock.sendMessage(from, {
-              text: `⚡ 𝐍𝐞𝐱𝐆𝐞𝐧 𝐌𝐨𝐝𝐞𝐫𝐚𝐭𝐢𝐨𝐧\nAccess denied for @${id.split("@")[0]} 🚫\n\n⌁ 𝐕𝐔 𝐍𝐞𝐱𝐆𝐞𝐧 🚀`,
+              text: `⚡ 𝐍𝐞𝐱𝐭𝐆𝐞𝐧 𝐌𝐨𝐝𝐞𝐫𝐚𝐭𝐢𝐨𝐧\nAccess denied for @${id.split("@")[0]} 🚫\n\n⌁ 𝐕𝐔 𝐍𝐞𝐱𝐭𝐆𝐞𝐧 🚀`,
               mentions: [id],
             });
           } catch (_) {
