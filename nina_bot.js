@@ -8,7 +8,7 @@ import qrcode from "qrcode-terminal";
 import pino from "pino";
 import fs from "fs";
 
-const signature = "\n\n⌁ 𝐕𝐔 𝐍𝐞𝐱𝐆𝐞𝐧 🚀";
+const signature = "\n\n⌁ 𝐕𝐔 𝐍𝐞𝐱𝐭𝐆𝐞𝐧 🚀";
 
 const DEVELOPER_LID      = "124842233843944";
 const DATA_DIR           = process.env.DATA_DIR || "./";
@@ -262,7 +262,7 @@ async function cleanupAuthFiles() {
 
 async function sendWelcomeMessage(sock, groupJid, userId) {
   const userTag = userId.split("@")[0];
-  const msgText = `╔═════════════╗\n ⚡ 𝐕𝐔 𝐍𝐞𝐱𝐆𝐞𝐧 ⚡\n╚═════════════╝\n 👋 Welcome @${userTag}\n To the next generation of learners & creators. 🚀\n 📚 Study smarter\n 💡 Think bigger\n 🤝 Connect stronger\n ⌁ 𝐕𝐔 𝐍𝐞𝐱𝐆𝐞𝐧 🚀`;
+  const msgText = `╔═════════════╗\n ⚡ 𝐕𝐔 𝐍𝐞𝐱𝐭𝐆𝐞𝐧 ⚡\n╚═════════════╝\n 👋 Welcome @${userTag}\n To the next generation of learners & creators. 🚀\n 📚 Study smarter\n 💡 Think bigger\n 🤝 Connect stronger\n ⌁ 𝐕𝐔 𝐍𝐞𝐱𝐆𝐞𝐧 🚀`;
   await sock.sendMessage(groupJid, { text: msgText, mentions: [userId] });
 }
 
