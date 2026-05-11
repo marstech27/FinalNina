@@ -56,6 +56,36 @@ const GOOD_MORNING_MSGS = [
   `☀️ *Rise & Shine!*\n"Your future starts now" ⏰`,
 ];
 
+// ── PROMOTION KEYWORDS (Enhanced) ──
+const PROMOTION_PATTERNS = [
+  // Price/paid indicators
+  /\b(rs\.?|pkr\.?|price|paid|fee|cost|charges?|payment|per\s*(month|week|day|hour)|monthly|weekly)\b/i,
+  // Service/product selling
+  /\b(sale|sell|selling|buy|order|available|stock|limited|offer|deal|discount|free\s*trial|signup|join\s*now|enroll|register\s*now)\b/i,
+  // Contact/reach out
+  /\b(contact|whatsapp|call|dm\s*(me|for|to)|inbox|message\s*me|ping\s*me|reach\s*out|pm\s*me)\b/i,
+  // Course/service words
+  /\b(course|class(es)?|coaching|mentoring|tutor(ing)?|workshop|seminar|webinar|lecture|training|bootcamp|batch)\b/i,
+  // Promotion words
+  /\b(promo(tion)?|adverti(se|sement|sing)|sponsor(ed)?|business|service|product|shop|store|brand)\b/i,
+  // Link patterns (non-WhatsApp)
+  /https?:\/\/(?!chat\.whatsapp\.com|whatsapp\.com\/channel)\S+/i,
+  // Earnings/income
+  /\b(earn(ing)?|income|profit|revenue|money|invest(ment)?|return(s)?|commission|affiliate)\b/i,
+];
+
+function isPromotionalMessage(text) {
+  if (!text || text.trim().length < 10) return false;
+  let matchCount = 0;
+  for (const pattern of PROMOTION_PATTERNS) {
+    if (pattern.test(text)) matchCount++;
+    if (matchCount >= 2) return true;
+  }
+  // Also flag if text is long and has at least 1 strong indicator
+  if (text.length > 100 && matchCount >= 1) return true;
+  return false;
+}
+
 const spamCount       = new Map();
 const promotionCount  = new Map();
 const lockedUsers     = new Map();
@@ -323,8 +353,9 @@ async function startBot() {
           if (!botRemovedUsers.get(id).size) botRemovedUsers.delete(id);
           return;
         }
+        // ── Member left message (styled font) ──
         await sock.sendMessage(id, {
-          text: `⚡ 𝐍𝐞𝐱𝐆𝐞𝐧 𝐌𝐨𝐝𝐞𝐫𝐚𝐭𝐢𝐨𝐧\nAccess denied for @${user.split("@")[0]} 🚫\n\n⌁ 𝐕𝐔 𝐍𝐞𝐱𝐆𝐞𝐧 🚀`,
+          text: `『 𝐕𝐔 𝐍𝐞𝐱𝐭𝐆𝐞𝐧 』\n\n❌ 𝗔 𝗠𝗲𝗺𝗯𝗲𝗿 𝗛𝗮𝘀 𝗟𝗲𝗳𝘁\n\n@${user.split("@")[0]} 𝐡𝐚𝐬 𝐥𝐞𝐟𝐭 𝐭𝐡𝐞 𝐠𝐫𝐨𝐮𝐩 👋\n\n𝑾𝒊𝒔𝒉 𝒚𝒐𝒖 𝒂𝒍𝒍 𝒕𝒉𝒆 𝒃𝒆𝒔𝒕 🌟${signature}`,
           mentions: [user],
         });
       }
@@ -440,7 +471,7 @@ async function startBot() {
         return;
       }
 
-      // 7. .add
+      // ── .add ──
       if (isAdmin && cmd.startsWith(".add")) {
         if (!botIsAdmin)
           return sock.sendMessage(from, {
@@ -470,7 +501,7 @@ async function startBot() {
         return;
       }
 
-      // 8. .kick
+      // ── .kick ──
       if (isAdmin && cmd.startsWith(".kick")) {
         let targets = [];
         const ctx = msg.message?.extendedTextMessage?.contextInfo;
@@ -526,74 +557,55 @@ async function startBot() {
         return;
       }
 
-      // 9. Promotion/Service detection
-     if (!isAdmin && isDefinitePromotion && !isDev) {
-  if (!promotionCount.has(from)) promotionCount.set(from, {});
-  const pc = promotionCount.get(from);
+      // ── Anti-Promotion Detection (Enhanced — same style as anti-link) ──
+      const isDefinitePromotion = isPromotionalMessage(text);
 
-  pc[senderStr] ??= { count: 0, timeout: null };
-  pc[senderStr].count++;
+      if (!isAdmin && isDefinitePromotion && !isDev) {
+        if (!promotionCount.has(from)) promotionCount.set(from, {});
+        const pc = promotionCount.get(from);
 
-  clearTimeout(pc[senderStr].timeout);
+        pc[senderStr] ??= { count: 0, timeout: null };
+        pc[senderStr].count++;
 
-  pc[senderStr].timeout = setTimeout(() => {
-    pc[senderStr].count = 0;
-  }, 60000); // 1 minute reset
+        clearTimeout(pc[senderStr].timeout);
+        pc[senderStr].timeout = setTimeout(() => {
+          pc[senderStr].count = 0;
+        }, 60000);
 
-  // 🚫 DELETE PROMOTIONAL MESSAGE
-  if (botIsAdmin) {
-    try {
-      await sock.sendMessage(from, {
-        delete: msg.key
-      });
-    } catch (_) {}
-  }
+        // 🚫 DELETE PROMOTIONAL MESSAGE FIRST
+        if (botIsAdmin) {
+          try {
+            await sock.sendMessage(from, { delete: msg.key });
+          } catch (_) {}
+        }
 
-  // ⚠️ WARNING MESSAGE
-  await sock.sendMessage(from, {
-    text: `⚠️ 𝐏𝐫𝐨𝐦𝐨𝐭𝐢𝐨𝐧 𝐃𝐞𝐭𝐞𝐜𝐭𝐞𝐝 — @${senderStr.split("@")[0]}
+        // ⚠️ WARNING MESSAGE
+        await sock.sendMessage(from, {
+          text: `⚠️ 𝐏𝐫𝐨𝐦𝐨𝐭𝐢𝐨𝐧 𝐃𝐞𝐭𝐞𝐜𝐭𝐞𝐝 — @${senderStr.split("@")[0]}\n\n𝐏𝐫𝐨𝐦𝐨𝐭𝐢𝐨𝐧𝐚𝐥 𝐜𝐨𝐧𝐭𝐞𝐧𝐭 𝐢𝐬 𝐧𝐨𝐭 𝐚𝐥𝐥𝐨𝐰𝐞𝐝 𝐡𝐞𝐫𝐞 🚫\n𝐏𝐥𝐞𝐚𝐬𝐞 𝐭𝐚𝐤𝐞 𝐚𝐝𝐦𝐢𝐧 𝐩𝐞𝐫𝐦𝐢𝐬𝐬𝐢𝐨𝐧 𝐟𝐢𝐫𝐬𝐭\n\n⚡ 𝐖𝐚𝐫𝐧𝐢𝐧𝐠 • ${pc[senderStr].count}/3${signature}`,
+          mentions: [senderStr],
+        });
 
-Promotional content is not allowed here.
-Please take admin permission first.
+        // 🚨 REMOVE AFTER 3 WARNINGS
+        if (pc[senderStr].count >= 3 && botIsAdmin) {
+          try {
+            if (!botRemovedUsers.has(from)) botRemovedUsers.set(from, new Set());
+            botRemovedUsers.get(from).add(senderStr);
 
-⚡ 𝐖𝐚𝐫𝐧𝐢𝐧𝐠 • ${pc[senderStr].count}/3${signature}`,
-    mentions: [senderStr],
-  });
+            await sock.groupParticipantsUpdate(from, [senderStr], "remove");
 
-  // 🚨 REMOVE AFTER 3 WARNINGS
-  if (pc[senderStr].count >= 3 && botIsAdmin) {
-    try {
+            await sock.sendMessage(from, {
+              text: `🚨 *𝐔𝐬𝐞𝐫 𝐑𝐞𝐦𝐨𝐯𝐞𝐝*\n\n@${senderStr.split("@")[0]} 𝐫𝐞𝐦𝐨𝐯𝐞𝐝 𝐚𝐟𝐭𝐞𝐫 𝐫𝐞𝐩𝐞𝐚𝐭𝐞𝐝 𝐩𝐫𝐨𝐦𝐨𝐭𝐢𝐨𝐧𝐬\n\n𝐏𝐫𝐨𝐦𝐨𝐭𝐢𝐨𝐧𝐚𝐥 𝐜𝐨𝐧𝐭𝐞𝐧𝐭 𝐢𝐬 𝐧𝐨𝐭 𝐭𝐨𝐥𝐞𝐫𝐚𝐭𝐞𝐝${signature}`,
+              mentions: [senderStr],
+            });
+          } catch (err) {
+            console.log("Promotion remove error:", err);
+          }
+        }
 
-      if (!botRemovedUsers.has(from)) {
-        botRemovedUsers.set(from, new Set());
+        return;
       }
 
-      botRemovedUsers.get(from).add(senderStr);
-
-      await sock.groupParticipantsUpdate(
-        from,
-        [senderStr],
-        "remove"
-      );
-
-      await sock.sendMessage(from, {
-        text: `🚨 *𝐔𝐬𝐞𝐫 𝐑𝐞𝐦𝐨𝐯𝐞𝐝*
-
-@${senderStr.split("@")[0]} removed after repeated promotions.
-
-𝐏𝐫𝐨𝐦𝐨𝐭𝐢𝐨𝐧𝐚𝐥 𝐜𝐨𝐧𝐭𝐞𝐧𝐭 𝐢𝐬 𝐧𝐨𝐭 𝐭𝐨𝐥𝐞𝐫𝐚𝐭𝐞𝐝${signature}`,
-        mentions: [senderStr],
-      });
-
-    } catch (err) {
-      console.log("Promotion remove error:", err);
-    }
-  }
-
-  return;
-}
-
-      // 10. Anti-link / Anti-sticker enforcement
+      // ── Anti-link / Anti-sticker enforcement ──
       const groupLinkRegex   = /https:\/\/chat\.whatsapp\.com\/\S+/i;
       const channelLinkRegex = /https:\/\/whatsapp\.com\/channel\/\S+/i;
       const isSticker        = !!msg.message?.stickerMessage;
@@ -635,7 +647,7 @@ Please take admin permission first.
         }
       }
 
-      // 10. .specialwelcome
+      // ── .specialwelcome ──
       if (isAdmin && cmd.startsWith(".specialwelcome")) {
         if (!mentionedJids.length)
           return sock.sendMessage(from, {
@@ -644,19 +656,25 @@ Please take admin permission first.
         for (const id of mentionedJids) {
           await sock.sendMessage(from, {
             text:
-              `💎 *𝐕𝐈𝐏 𝐖𝐞𝐥𝐜𝐨𝐦𝐞 — 𝐕𝐔 𝐍𝐞𝐱𝐭𝐆𝐞𝐧*\n\n` +
-              `𝐇𝐞𝐥𝐥𝐨 @${id.split("@")[0]}\n\n` +
-              `𝐇𝐨𝐧𝐨𝐫𝐞𝐝 𝐭𝐨 𝐡𝐚𝐯𝐞 𝐲𝐨𝐮 𝐡𝐞𝐫𝐞\n` +
-              `𝐘𝐨𝐮𝐫 𝐩𝐫𝐞𝐬𝐞𝐧𝐜𝐞 𝐚𝐝𝐝𝐬 𝐯𝐚𝐥𝐮𝐞 🌟\n\n` +
-              `𝐒𝐡𝐚𝐫𝐞 𝐤𝐧𝐨𝐰𝐥𝐞𝐝𝐠𝐞, 𝐠𝐫𝐨𝐰 𝐭𝐨𝐠𝐞𝐭𝐡𝐞𝐫\n` +
-              `𝐖𝐞𝐥𝐜𝐨𝐦𝐞 𝐚𝐛𝐨𝐚𝐫𝐝! 🚀${signature}`,
+              `╔══════════════════╗\n` +
+              `║  💎 𝗩𝗜𝗣 𝗪𝗘𝗟𝗖𝗢𝗠𝗘 💎  ║\n` +
+              `╚══════════════════╝\n\n` +
+              `✨ 𝑾𝒆𝒍𝒄𝒐𝒎𝒆, @${id.split("@")[0]} ✨\n\n` +
+              `『 𝐕𝐔 𝐍𝐞𝐱𝐭𝐆𝐞𝐧 𝐢𝐬 𝐇𝐨𝐧𝐨𝐫𝐞𝐝 』\n` +
+              `𝐭𝐨 𝐡𝐚𝐯𝐞 𝐲𝐨𝐮 𝐚𝐦𝐨𝐧𝐠 𝐮𝐬 🌟\n\n` +
+              `❝ 𝒀𝒐𝒖𝒓 𝒑𝒓𝒆𝒔𝒆𝒏𝒄𝒆 𝒂𝒅𝒅𝒔\n` +
+              `   𝒊𝒎𝒎𝒆𝒂𝒔𝒖𝒓𝒂𝒃𝒍𝒆 𝒗𝒂𝒍𝒖𝒆 ❞\n\n` +
+              `🚀 𝐒𝐡𝐚𝐫𝐞 𝐊𝐧𝐨𝐰𝐥𝐞𝐝𝐠𝐞\n` +
+              `💡 𝐈𝐧𝐬𝐩𝐢𝐫𝐞 𝐎𝐭𝐡𝐞𝐫𝐬\n` +
+              `🤝 𝐆𝐫𝐨𝐰 𝐓𝐨𝐠𝐞𝐭𝐡𝐞𝐫\n\n` +
+              `⚡ 𝗪𝗲𝗹𝗰𝗼𝗺𝗲 𝗔𝗯𝗼𝗮𝗿𝗱! 🎯${signature}`,
             mentions: [id],
           });
         }
         return;
       }
 
-      // 11. .lockchaton
+      // ── .lockchaton ──
       if (isAdmin && cmd.startsWith(".lockchaton")) {
         if (!mentionedJids.length)
           return sock.sendMessage(from, {
@@ -681,7 +699,7 @@ Please take admin permission first.
         return;
       }
 
-      // 12. .lockchatoff
+      // ── .lockchatoff ──
       if (isAdmin && cmd.startsWith(".lockchatoff")) {
         if (!mentionedJids.length)
           return sock.sendMessage(from, {
@@ -701,7 +719,7 @@ Please take admin permission first.
         return;
       }
 
-      // 13. .lockedlist
+      // ── .lockedlist ──
       if (isAdmin && cmd.startsWith(".lockedlist")) {
         const list = lockedUsers.get(from);
         if (!list?.size)
@@ -715,7 +733,7 @@ Please take admin permission first.
         return;
       }
 
-      // 14. .unlockall
+      // ── .unlockall ──
       if (isAdmin && cmd.startsWith(".unlockall")) {
         lockedUsers.set(from, new Set());
         lockedCounters.set(from, {});
@@ -726,7 +744,7 @@ Please take admin permission first.
         return;
       }
 
-      // Locked user message deletion
+      // ── Locked user message deletion ──
       if (lockedUsers.has(from) && lockedUsers.get(from).has(senderStr)) {
         if (botIsAdmin) {
           try {
