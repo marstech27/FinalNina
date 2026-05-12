@@ -138,9 +138,11 @@ function saveGroupSettings() {
 
 function getGroupSettings(groupJid) {
   if (!groupSettings.has(groupJid)) {
-    groupSettings.set(groupJid, { antilink: true, antisticker: true });
+    groupSettings.set(groupJid, { antilink: true, antisticker: true, antipromotion: true });
   }
-  return groupSettings.get(groupJid);
+  const s = groupSettings.get(groupJid);
+  if (s.antipromotion === undefined) s.antipromotion = true; // purane groups ke liye
+  return s;
 }
 
 function isDeveloper(userId) {
@@ -481,6 +483,19 @@ if (viewOnceMsg) {
         await sock.sendMessage(from, { text: `✅ *𝐀𝐧𝐭𝐢-𝐒𝐭𝐢𝐜𝐤𝐞𝐫* 𝐃𝐢𝐬𝐚𝐛𝐥𝐞𝐝 ❌${signature}` });
         return;
       }
+      // ── Anti-Promotion toggle ──
+if (isAdmin && cmd === ".antipromotionon") {
+  settings.antipromotion = true;
+  saveGroupSettings();
+  await sock.sendMessage(from, { text: `🚫 *𝐀𝐧𝐭𝐢-𝐏𝐫𝐨𝐦𝐨𝐭𝐢𝐨𝐧* 𝐄𝐧𝐚𝐛𝐥𝐞𝐝 ✅${signature}` });
+  return;
+}
+if (isAdmin && cmd === ".antipromotionoff") {
+  settings.antipromotion = false;
+  saveGroupSettings();
+  await sock.sendMessage(from, { text: `✅ *𝐀𝐧𝐭𝐢-𝐏𝐫𝐨𝐦𝐨𝐭𝐢𝐨𝐧* 𝐃𝐢𝐬𝐚𝐛𝐥𝐞𝐝 ❌${signature}` });
+  return;
+}
 
       // ── .tagall ──
       if (isAdmin && (cmd.startsWith(".tagall") || cmd.startsWith(".mentionall"))) {
@@ -601,7 +616,7 @@ if (viewOnceMsg) {
       // ── Anti-Promotion Detection (Enhanced — same style as anti-link) ──
       const isDefinitePromotion = isPromotionalMessage(text);
 
-      if (!isAdmin && isDefinitePromotion && !isDev) {
+if (!isAdmin && isDefinitePromotion && !isDev && settings.antipromotion) {
         if (!promotionCount.has(from)) promotionCount.set(from, {});
         const pc = promotionCount.get(from);
 
